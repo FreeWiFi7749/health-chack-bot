@@ -12,7 +12,7 @@ from utils.db.table import BotTable
 class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health check commands for bots'):
     def __init__(self, bot):
         self.bot = bot
-        self.db = BotTable(bot.db)
+        self.db = BotTable()
         self.check_bots.start()
         self.log_setup()
         logging.debug('HealthCheckGroup initialized')
