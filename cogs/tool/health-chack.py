@@ -7,7 +7,7 @@ from discord.ext.commands import GroupCog
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health check commands for bots'):
@@ -186,6 +186,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         try:
             for guild in self.bot.guilds:
                 bots = self.get_bots(guild)
+                logging.info(f'{bots} in {guild.name}')
                 channel_file_path = f'data/hc/{guild.id}/channel.json'
                 channel_data = self.load_channel_data(channel_file_path)
                 if channel_data['bots']:
@@ -230,7 +231,8 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                                 last_channel_notified = datetime.fromisoformat(bot_data.get('last_channel_notification_time', '1970-01-01T00:00:00'))
                                                 if datetime.utcnow() - last_channel_notified > timedelta(minutes=10):
                                                     logging.debug(f"通知チャンネル: {notification_channel.name}")
-                                                    e = discord.Embed(title='BOTがオフラインになりました。', description=f"{bot_member.name}がオフラインになって10分が経過しました。", color=discord.Color.red())
+                                                    now_jst = datetime.now(timezone(timedelta(hours=9)))
+                                                    e = discord.Embed(title='BOTがオフラインになりました。', description=f"{bot_member.name}がオフラインになって10分が経過しました。", color=discord.Color.red(), timestamp=now_jst)
                                                     last_online_time = datetime.fromisoformat(bot_data['last_online'])
                                                     last_online_timestamp = last_online_time.timestamp()
                                                     e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオフライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
@@ -245,7 +247,8 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                                     dm_channel = user.dm_channel or await user.create_dm()
                                                     last_dm_notified = datetime.fromisoformat(bot_data.get('last_dm_notification_time', '1970-01-01T00:00:00'))
                                                     if datetime.utcnow() - last_dm_notified > timedelta(minutes=10):
-                                                        e = discord.Embed(title='BOTがオフラインになりました。', description=f"{bot_member.name}がオフラインになって10分が経過しました。", color=discord.Color.red())
+                                                        now_jst = datetime.now(timezone(timedelta(hours=9)))
+                                                        e = discord.Embed(title='BOTがオフラインになりました。', description=f"{bot_member.name}がオフラインになって10分が経過しました。", color=discord.Color.red(), timestamp=now_jst)
                                                         last_online_time = datetime.fromisoformat(bot_data['last_online'])
                                                         last_online_timestamp = last_online_time.timestamp()
                                                         e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオフライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
@@ -277,7 +280,8 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                     if notification_channel is not None:
                                         bot_data['last_channel_online_notification_time'] = datetime.utcnow().isoformat()
                                         if datetime.utcnow() - datetime.fromisoformat(bot_data['last_channel_online_notification_time']) == None:
-                                            e = discord.Embed(title='BOTがオンラインになりました。', description=f"{bot_member.name}がオンラインになりました。", color=discord.Color.green())
+                                            now_jst = datetime.now(timezone(timedelta(hours=9)))
+                                            e = discord.Embed(title='BOTがオンラインになりました。', description=f"{bot_member.name}がオンラインになりました。", color=discord.Color.green(), timestamp=now_jst)
                                             last_online_time = datetime.fromisoformat(bot_data['last_online'])
                                             last_online_timestamp = last_online_time.timestamp()
                                             e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオンライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
@@ -293,7 +297,8 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                             if datetime.utcnow() - datetime.fromisoformat(bot_data['last_dm_online_notification_time']) == None:
 
                                                 dm_channel = user.dm_channel or await user.create_dm()
-                                                e = discord.Embed(title='BOTがオンラインになりました。', description=f"{bot_member.name}がオンラインになりました。", color=discord.Color.green())
+                                                now_jst = datetime.now(timezone(timedelta(hours=9)))
+                                                e = discord.Embed(title='BOTがオンラインになりました。', description=f"{bot_member.name}がオンラインになりました。", color=discord.Color.green(), timestamp=now_jst)
                                                 last_online_time = datetime.fromisoformat(bot_data['last_online'])
                                                 last_online_timestamp = last_online_time.timestamp()
                                                 e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオンライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
