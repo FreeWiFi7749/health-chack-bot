@@ -11,7 +11,7 @@ def save_log(log_data):
     dir_path = f'{base_dir_path}/{date_str}/{time_str}'
 
     if base_dir_path not in os.listdir():
-        os.makedirs(base_dir_path)
+        os.makedirs(base_dir_path, exist_ok=True)
 
     date_folders = [f for f in os.listdir(base_dir_path) if os.path.isdir(os.path.join(base_dir_path, f))]
     if len(date_folders) > 10:
