@@ -2,6 +2,7 @@ from discord.ext import commands
 import discord
 import pathlib
 from discord import app_commands
+from typing import List
 
 class ManagementCog(commands.Cog):
     def __init__(self, bot):
@@ -25,7 +26,7 @@ class ManagementCog(commands.Cog):
         self, 
         interaction: discord.Interaction, 
         current: str
-    ) -> list[app_commands.Choice[str]]:
+    ) -> List[app_commands.Choice[str]]:
         available_cogs = self._get_available_cogs()
         filtered_cogs = [cog for cog in available_cogs if current.lower() in cog.lower()]
         return [
@@ -73,7 +74,7 @@ class ManagementCog(commands.Cog):
 
         if hasattr(self.bot, 'failed_cogs') and self.bot.failed_cogs:
             failed_cogs_list = [f'{cog}: {error}' for cog, error in self.bot.failed_cogs.items()]
-            e_failed_cogs = discord.Embed(title="正常に読み込めなかったCogファイル一覧", color=discord.Color.red())
+            e_failed_cogs = discord.Embed(title="正常に読み込��なかったCogファイル一覧", color=discord.Color.red())
             e_failed_cogs.add_field(name="Failed Cogs", value='\n'.join(failed_cogs_list), inline=False)
         else:
             e_failed_cogs = discord.Embed(title="正常に読み込めなかったCogファイル一覧", color=discord.Color.green())
@@ -83,4 +84,5 @@ class ManagementCog(commands.Cog):
         await ctx.send(embed=e_failed_cogs)
 
 async def setup(bot):
+    await bot.add_cog(ManagementCog(bot))
     await bot.add_cog(ManagementCog(bot))
