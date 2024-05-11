@@ -12,7 +12,7 @@ class Database:
         try:
             self.conn = psycopg2.connect(self.dsn)
             logging.debug("データベースに接続しました。")
-            return self.conn  # 接続が成功した場合は conn を返す
+            return self.conn
         except Exception as e:
             logging.error(f"データベース接続に失敗しました: {e}")
             return None

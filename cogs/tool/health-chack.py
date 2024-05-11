@@ -10,6 +10,22 @@ from datetime import datetime, timedelta, timezone
 from utils.db.table import BotTable
 from utils.db.db import Database
 
+class DatabaseSetup:
+    def __init__(self):
+        self.db = Database()
+        self.db_connection = self.db.connect()
+        if self.db_connection is None:
+            logging.error("データベースへの接続に失敗しました。")
+            return
+        self.bot_table = BotTable(self.db)
+
+    def create_tables(self):
+        self.bot_table.create_dm_table()
+        self.bot_table.create_channel_table()
+
+    def close_connection(self):
+        self.db.close()
+
 
 class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health check commands for bots'):
     def __init__(self, bot, db_connection):
@@ -195,9 +211,9 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
             pass 
 
 async def setup(bot):
-    db_instance = Database()
-    db_connection = db_instance.connect()
-    if db_connection is None:
+    db_setup = DatabaseSetup()
+    if db_setup.db_connection is None:
         logging.error("データベースへの接続に失敗しました。")
         return
-    await bot.add_cog(HealthCheckGroup(bot, db_connection))
+    db_setup.create_tables()
+    await bot.add_cog(HealthCheckGroup(bot, db_setup.db_connection))
