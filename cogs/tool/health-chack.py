@@ -8,11 +8,13 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from utils.db.table import BotTable
+from utils.db.db import Database
+
 
 class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health check commands for bots'):
-    def __init__(self, bot):
+    def __init__(self, bot, db_connection):
         self.bot = bot
-        self.db = BotTable()
+        self.db = BotTable(db_connection)
         self.check_bots.start()
         self.log_setup()
         logging.debug('HealthCheckGroup initialized')
@@ -89,7 +91,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         logging.debug('Checking bots...')
         try:
             for guild in self.bot.guilds:
-                bots = self.get_bots(guild)
+                bots = self.db.get_bots(guild)
                 for bot in bots:
                     user_id = self.find_user_by_bot_id(bot.id)
                     if user_id is not None:
@@ -187,10 +189,15 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                             else:
                                 logging.debug(f"BOT: {bot_data['name']} が見つかりません。")
                     else:
-                        pass
+                        logging.debug(f"ユーザーが見つかりません。")
         except Exception as e:
             logging.error(f"BOTのヘルスチェック中にエラーが発生しました: {e}")
-            pass
+            pass 
 
 async def setup(bot):
-    await bot.add_cog(HealthCheckGroup(bot))
+    db_instance = Database()
+    db_connection = db_instance.connect()
+    if db_connection is None:
+        logging.error("データベースへの接続に失敗しました。")
+        return
+    await bot.add_cog(HealthCheckGroup(bot, db_connection))

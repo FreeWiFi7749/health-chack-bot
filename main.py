@@ -75,7 +75,6 @@ class MyBot(commands.AutoShardedBot):
     async def on_ready(self):
         print("on_ready is called")
         await self.logo()
-        await asyncio.sleep(3)
         log_data = {
             "event": "BotReady",
             "description": f"{self.user} has successfully connected to Discord.",
