@@ -207,6 +207,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                             if bot_member:
                                 last_online = datetime.fromisoformat(bot_data['last_online'])
                                 if bot_member.status != discord.Status.online:
+                                    logging.debug(f"BOT: {bot_member.name}")
                                     logging.debug(f"BOT: {bot_member.status}")
                                     logging.debug(f"最終オンライン: {last_online}")
                                     if datetime.utcnow() - last_online > timedelta(minutes=10):
