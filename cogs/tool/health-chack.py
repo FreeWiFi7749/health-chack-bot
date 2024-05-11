@@ -224,50 +224,72 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                         if datetime.utcnow() - last_notified > timedelta(minutes=10):
                                             logging.debug(f"{bot_member.name}がオフラインになって10分が経過しました。")
                                             logging.debug(f"通知チャンネル: {notification_channel}")
+
+                                            # チャンネル通知の最終時間を確認
+                                            last_channel_notified_str = bot_data.get('last_channel_notification_time')
+                                            if last_channel_notified_str is None:
+                                                last_channel_notified = datetime.utcnow() - timedelta(minutes=11)
+                                            else:
+                                                last_channel_notified = datetime.fromisoformat(last_channel_notified_str)
+
+                                            # DM通知の最終時間を確認
+                                            last_dm_notified_str = bot_data.get('last_dm_notification_time')
+                                            if last_dm_notified_str is None:
+                                                last_dm_notified = datetime.utcnow() - timedelta(minutes=11)
+                                            else:
+                                                last_dm_notified = datetime.fromisoformat(last_dm_notified_str)
+
+                                            # チャンネル通知の時間が10分以上経過しているかチェック
+                                            if datetime.utcnow() - last_channel_notified > timedelta(minutes=10):
+                                                logging.debug(f"{bot_member.name}にチャンネル通知を送信します。")
                                             if notification_channel is None:
                                                 logging.debug("通知チャンネルが見つかりません。")
-                                            if notification_channel is not None:
-                                                last_channel_notified = datetime.fromisoformat(bot_data.get('last_channel_notification_time', '1970-01-01T00:00:00'))
-                                                if datetime.utcnow() - last_channel_notified > timedelta(minutes=10):
-                                                    logging.debug(f"通知チャンネル: {notification_channel.name}")
-                                                    now_jst = datetime.now(timezone(timedelta(hours=9)))
-                                                    e = discord.Embed(title='BOTがオフラインになりました。', description=f"{bot_member.name}がオフラインになって10分が経過しました。", color=discord.Color.red(), timestamp=now_jst)
-                                                    last_online_time = datetime.fromisoformat(bot_data['last_online'])
-                                                    last_online_timestamp = last_online_time.timestamp()
-                                                    e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオフライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
-                                                    await notification_channel.send(embed=e)
-                                                    bot_data['last_channel_notification_time'] = datetime.utcnow().isoformat()
-                                                    self.save_channel_data(channel_file_path, channel_data)
-                                                    logging.debug(f"{bot_member.name}にチャンネル通知を送信しました。")
-                                            if user_id is not None:
-                                                user = self.bot.get_user(int(user_id))
-                                                if user:
-                                                    logging.debug(f"ユーザー: {user.name}")
-                                                    dm_channel = user.dm_channel or await user.create_dm()
-                                                    last_dm_notified = datetime.fromisoformat(bot_data.get('last_dm_notification_time', '1970-01-01T00:00:00'))
-                                                    if datetime.utcnow() - last_dm_notified > timedelta(minutes=10):
+                                                if notification_channel is not None:
+                                                    last_channel_notified = datetime.fromisoformat(bot_data.get('last_channel_notification_time', '1970-01-01T00:00:00'))
+                                                    if datetime.utcnow() - last_channel_notified > timedelta(minutes=10):
+                                                        logging.debug(f"通知チャンネル: {notification_channel.name}")
                                                         now_jst = datetime.now(timezone(timedelta(hours=9)))
                                                         e = discord.Embed(title='BOTがオフラインになりました。', description=f"{bot_member.name}がオフラインになって10分が経過しました。", color=discord.Color.red(), timestamp=now_jst)
                                                         last_online_time = datetime.fromisoformat(bot_data['last_online'])
                                                         last_online_timestamp = last_online_time.timestamp()
                                                         e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオフライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
-                                                        await dm_channel.send(embed=e)
-                                                        bot_data['last_dm_notification_time'] = datetime.utcnow().isoformat()
-                                                        self.save_data(file_path, data_dict, user_id)
-                                                        logging.debug(f"{bot_member.name}にDMを送信しました。")
-                                                else:
-                                                    logging.error("ユーザーが見つかりません。")
-                                            bot_data['last_notification_time'] = datetime.utcnow().isoformat()
-                                            bot_data['last_channel_online_notification_time'] == None
-                                            bot_data['last_dm_online_notification_time'] == None
-                                            bot_data['bots'][0]['last_notification_time'] = datetime.utcnow().isoformat()
-                                            bot_data['bots'][0]['last_channel_online_notification_time'] == None
-                                            bot_data['bots'][0]['last_dm_online_notification_time'] == None
-                                            self.save_data(file_path, data_dict, user_id)
-                                            self.save_channel_data(channel_file_path, channel_data)
-                                            logging.debug(f"{bot_member.name}に通知を送信済みです。")
-                                        else:
-                                            logging.debug(f"{bot_member.name}に通知を送信済みです。")
+                                                        await notification_channel.send(embed=e)
+                                                        bot_data['last_channel_notification_time'] = datetime.utcnow().isoformat()
+                                                        self.save_channel_data(channel_file_path, channel_data)
+                                                        logging.debug(f"{bot_member.name}にチャンネル通知を送信しました。")
+                                                    else:
+                                                        logging.debug(f"{bot_member.name}にチャンネル通知を送信済みです。")
+
+                                            if datetime.utcnow() - last_dm_notified > timedelta(minutes=10):
+                                                logging.debug(f"{bot_member.name}にDM通知を送信します。")
+                                                if user_id is not None:
+                                                    user = self.bot.get_user(int(user_id))
+                                                    if user:
+                                                        logging.debug(f"ユーザー: {user.name}")
+                                                        dm_channel = user.dm_channel or await user.create_dm()
+                                                        last_dm_notified = datetime.fromisoformat(bot_data.get('last_dm_notification_time', '1970-01-01T00:00:00'))
+                                                        if datetime.utcnow() - last_dm_notified > timedelta(minutes=10):
+                                                            now_jst = datetime.now(timezone(timedelta(hours=9)))
+                                                            e = discord.Embed(title='BOTがオフラインになりました。', description=f"{bot_member.name}がオフラインになって10分が経過しました。", color=discord.Color.red(), timestamp=now_jst)
+                                                            last_online_time = datetime.fromisoformat(bot_data['last_online'])
+                                                            last_online_timestamp = last_online_time.timestamp()
+                                                            e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオフライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
+                                                            await dm_channel.send(embed=e)
+                                                            bot_data['last_dm_notification_time'] = datetime.utcnow().isoformat()
+                                                            self.save_data(file_path, data_dict, user_id)
+                                                            logging.debug(f"{bot_member.name}にDMを送信しました。")
+                                                        else:
+                                                            logging.debug(f"{bot_member.name}にDMを送信済みです。")
+                                                    else:
+                                                        logging.error("ユーザーが見つかりません。")
+                                                bot_data['last_notification_time'] = datetime.utcnow().isoformat()
+                                                bot_data['last_channel_online_notification_time'] == None
+                                                bot_data['last_dm_online_notification_time'] == None
+                                                bot_data['bots'][0]['last_notification_time'] = datetime.utcnow().isoformat()
+                                                bot_data['bots'][0]['last_channel_online_notification_time'] == None
+                                                bot_data['bots'][0]['last_dm_online_notification_time'] == None
+                                                self.save_data(file_path, data_dict, user_id)
+                                                self.save_channel_data(channel_file_path, channel_data)
                                     else:
                                         nokori = timedelta(minutes=10) - (datetime.utcnow() - last_online)
                                         if nokori.total_seconds() > 0:
