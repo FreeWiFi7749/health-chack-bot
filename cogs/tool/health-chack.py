@@ -181,6 +181,8 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
     @tasks.loop(minutes=1)
     async def check_bots(self):
         logging.debug('Checking bots...')
+        if 'data/hc' not in os.listdir():
+            os.makedirs('data/hc', exist_ok=True)
         try:
             for guild in self.bot.guilds:
                 bots = self.get_bots(guild)
