@@ -33,7 +33,7 @@ logger.addHandler(SessionIDHandler())
 
 TOKEN = os.getenv('BOT_TOKEN')
 command_prefix = ['gz/']
-main_guild_id = int(os.getenv('DEV_GUILD_ID'))
+main_guild_id = int(os.getenv('MAIN_GUILD_ID'))
 
 class MyBot(commands.AutoShardedBot):
     def __init__(self, *args, **kwargs):
