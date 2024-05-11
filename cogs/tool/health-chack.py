@@ -282,14 +282,14 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                                             logging.debug(f"{bot_member.name}にDMを送信済みです。")
                                                     else:
                                                         logging.error("ユーザーが見つかりません。")
-                                                bot_data['last_notification_time'] = datetime.utcnow().isoformat()
-                                                bot_data['last_channel_online_notification_time'] == None
-                                                bot_data['last_dm_online_notification_time'] == None
-                                                bot_data['bots'][0]['last_notification_time'] = datetime.utcnow().isoformat()
-                                                bot_data['bots'][0]['last_channel_online_notification_time'] == None
-                                                bot_data['bots'][0]['last_dm_online_notification_time'] == None
-                                                self.save_data(file_path, data_dict, user_id)
-                                                self.save_channel_data(channel_file_path, channel_data)
+                                            bot_data['last_notification_time'] = datetime.utcnow().isoformat()
+                                            bot_data['last_channel_online_notification_time'] == None
+                                            bot_data['last_dm_online_notification_time'] == None
+                                            bot_data['bots'][0]['last_notification_time'] = datetime.utcnow().isoformat()
+                                            bot_data['bots'][0]['last_channel_online_notification_time'] == None
+                                            bot_data['bots'][0]['last_dm_online_notification_time'] == None
+                                            self.save_data(file_path, data_dict, user_id)
+                                            self.save_channel_data(channel_file_path, channel_data)
                                     else:
                                         nokori = timedelta(minutes=10) - (datetime.utcnow() - last_online)
                                         if nokori.total_seconds() > 0:
