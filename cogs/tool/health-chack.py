@@ -66,7 +66,9 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
             'name': bot_member.name, 
             'id': bot_member.id, 
             'last_online': datetime.utcnow().isoformat(),
-            'last_notification_time': None
+            'last_notification_time': None,
+            'last_channel_online_notification_time': None,
+            'last_dm_online_notification_time': None,
         })
         self.save_data(file_path, data, interaction.user.id)
         await interaction.response.send_message(f"{bot_member.name}を監視リストに追加しました。")
@@ -96,7 +98,9 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
             'id': bot_member.id,
             'channel_id': ch.id,
             'last_online': datetime.utcnow().isoformat(),
-            'last_notification_time': None
+            'last_notification_time': None,
+            'last_channel_online_notification_time': None,
+            'last_dm_online_notification_time': None
         })
         self.save_channel_data(file_path, data)
         await interaction.response.send_message(f"{channel.mention}に{bot_member.mention}の通知を追加しました。")
@@ -156,10 +160,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         if os.path.exists(file_path):
             with open(file_path, 'r') as file:
                 content = json.load(file)
-                logging.debug(f"Channel data found at {file_path}")
-                logging.debug(f"Channel data: {content}")
                 return content
-        logging.debug(f"Channel data not found at {file_path}")
         return {'bots': []}
 
     def get_bots(self, guild):
@@ -182,13 +183,11 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         logging.debug('Checking bots...')
         try:
             for guild in self.bot.guilds:
-                logging.debug(f"サーバー: {guild.name}, メンバー数: {len(guild.members)}")
                 bots = self.get_bots(guild)
                 channel_file_path = f'data/hc/{guild.id}/channel.json'
                 channel_data = self.load_channel_data(channel_file_path)
                 if channel_data['bots']:
                     notification_channel_id = channel_data['bots'][0]['channel_id']
-                    logging.debug(f"通知チャンネルID: {notification_channel_id}")
                     notification_channel = guild.get_channel(notification_channel_id)
                     if notification_channel:
                         logging.debug(f"通知チャンネル: {notification_channel.name}")
@@ -198,17 +197,14 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                     logging.error("チャンネルデータにBOTが登録されていません。")
 
                 for bot in bots:
-                    logging.debug(f"BOT確認: {bot.name} (ID: {bot.id})")
                     user_id = self.find_user_by_bot_id(bot.id)
                     if user_id is not None:
                         file_path = f'data/hc/{user_id}/list.json'
                         data_dict = self.load_data(file_path, user_id)
                         data = data_dict.get('bots', [])
                         for bot_data in data:
-                            logging.debug(f"BOT: {bot_data['name']}")
                             bot_member = guild.get_member(bot_data['id'])
                             if bot_member:
-                                logging.debug(f"BOT: {bot_member.name}")
                                 last_online = datetime.fromisoformat(bot_data['last_online'])
                                 if bot_member.status != discord.Status.online:
                                     logging.debug(f"BOT: {bot_member.status}")
@@ -232,7 +228,8 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                                 if datetime.utcnow() - last_channel_notified > timedelta(minutes=10):
                                                     logging.debug(f"通知チャンネル: {notification_channel.name}")
                                                     e = discord.Embed(title='BOTがオフラインになりました。', description=f"{bot_member.name}がオフラインになって10分が経過しました。", color=discord.Color.red())
-                                                    last_online_timestamp = last_online.timestamp()
+                                                    last_online_time = datetime.fromisoformat(bot_data['last_online'])
+                                                    last_online_timestamp = last_online_time.timestamp()
                                                     e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオフライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
                                                     await notification_channel.send(embed=e)
                                                     bot_data['last_channel_notification_time'] = datetime.utcnow().isoformat()
@@ -246,7 +243,8 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                                     last_dm_notified = datetime.fromisoformat(bot_data.get('last_dm_notification_time', '1970-01-01T00:00:00'))
                                                     if datetime.utcnow() - last_dm_notified > timedelta(minutes=10):
                                                         e = discord.Embed(title='BOTがオフラインになりました。', description=f"{bot_member.name}がオフラインになって10分が経過しました。", color=discord.Color.red())
-                                                        last_online_timestamp = last_online.timestamp()
+                                                        last_online_time = datetime.fromisoformat(bot_data['last_online'])
+                                                        last_online_timestamp = last_online_time.timestamp()
                                                         e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオフライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
                                                         await dm_channel.send(embed=e)
                                                         bot_data['last_dm_notification_time'] = datetime.utcnow().isoformat()
@@ -255,24 +253,66 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                                 else:
                                                     logging.error("ユーザーが見つかりません。")
                                             bot_data['last_notification_time'] = datetime.utcnow().isoformat()
+                                            bot_data['last_channel_online_notification_time'] == None
+                                            bot_data['last_dm_online_notification_time'] == None
+                                            bot_data['bots'][0]['last_notification_time'] = datetime.utcnow().isoformat()
+                                            bot_data['bots'][0]['last_channel_online_notification_time'] == None
+                                            bot_data['bots'][0]['last_dm_online_notification_time'] == None
                                             self.save_data(file_path, data_dict, user_id)
+                                            self.save_channel_data(channel_file_path, channel_data)
                                             logging.debug(f"{bot_member.name}に通知を送信済みです。")
                                         else:
                                             logging.debug(f"{bot_member.name}に通知を送信済みです。")
                                     else:
-                                        logging.debug(f"{bot_member.name}がオフラインになって10分未満です。")
+                                        nokori = timedelta(minutes=10) - (datetime.utcnow() - last_online)
+                                        if nokori.total_seconds() > 0:
+                                            logging.debug(f"{bot_member.name}がオフラインになって10分未満です。:あと{nokori}")
+                                        else:
+                                            logging.debug(f"{bot_member.name}がオフラインになって10分未満です。")
                                 else:
                                     logging.debug(f"{bot_member.name}はオンラインです。")
+                                    if notification_channel is not None:
+                                        bot_data['last_channel_online_notification_time'] = datetime.utcnow().isoformat()
+                                        if datetime.utcnow() - datetime.fromisoformat(bot_data['last_channel_online_notification_time']) == None:
+                                            e = discord.Embed(title='BOTがオンラインになりました。', description=f"{bot_member.name}がオンラインになりました。", color=discord.Color.green())
+                                            last_online_time = datetime.fromisoformat(bot_data['last_online'])
+                                            last_online_timestamp = last_online_time.timestamp()
+                                            e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオンライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
+                                            await notification_channel.send(embed=e)
+                                            bot_data['last_channel_online_notification_time'] = datetime.utcnow().isoformat()
+                                            self.save_channel_data(channel_file_path, channel_data)
+                                    else:
+                                        logging.debug("通知チャンネルが見つかりません。")
+                                    if user_id is not None:
+                                        user = self.bot.get_user(int(user_id))
+                                        if user:
+                                            bot_data['last_dm_online_notification_time'] = datetime.utcnow().isoformat()
+                                            if datetime.utcnow() - datetime.fromisoformat(bot_data['last_dm_online_notification_time']) == None:
+
+                                                dm_channel = user.dm_channel or await user.create_dm()
+                                                e = discord.Embed(title='BOTがオンラインになりました。', description=f"{bot_member.name}がオンラインになりました。", color=discord.Color.green())
+                                                last_online_time = datetime.fromisoformat(bot_data['last_online'])
+                                                last_online_timestamp = last_online_time.timestamp()
+                                                e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオンライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
+                                                await dm_channel.send(embed=e)
+                                                bot_data['last_dm_online_notification_time'] = datetime.utcnow().isoformat()
+                                                self.save_data(file_path, data_dict, user_id)
                                     bot_data['last_online'] = datetime.utcnow().isoformat()
+                                    channel_data['bots'][0]['last_online'] = datetime.utcnow().isoformat()
+                                    self.save_channel_data(channel_file_path, channel_data)
+                                    self.save_data(file_path, data_dict, user_id)
                                     last_notified = bot_data.get('last_notification_time', None)
                                     if last_notified is not None:
                                         bot_data['last_notification_time'] = None
                                         self.save_data(file_path, data_dict, user_id)
+                                        self.save_channel_data(channel_file_path, channel_data)
                                         logging.debug(f"{bot_member.name}のオンライン時間と通知時間を更新しました。")
+                                    else:
+                                        logging.debug(f"{bot_member.name}のオンライン時間を更新しました。")
                             else:
                                 logging.debug(f"BOT: {bot_data['name']} が見つかりません。")
                     else:
-                        logging.debug(f"BOT: {bot.name} に対応するユーザーが見つかりません。")
+                        pass
         except Exception as e:
             logging.error(f"BOTのヘルスチェック中にエラーが発生しました: {e}")
             pass
