@@ -31,7 +31,6 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
             if current in bot['name']:
                 choices.append(app_commands.Choice(name=bot['name'], value=bot['id']))
                 logging.debug(f"{bot['name']}: {bot['id']}")
-        logging.debug(choices)
         return choices
     
     async def bot_autocomplete(self, interaction: discord.Interaction, current: str):
@@ -43,7 +42,6 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
             if current_lower in bot.name.lower():
                 choices.append(app_commands.Choice(name=bot.name, value=str(bot.id)))
                 logging.debug(f"{bot.name}: {bot.id}")
-        logging.debug(f"選択肢: {choices}")
         if not choices:
             choices.append(app_commands.Choice(name="選択肢が見つかりません", value="none"))
         return choices
@@ -147,6 +145,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
             with open(file_path, 'r') as file:
                 content = json.load(file)
                 return content
+        logging.debug(f"Data for {user_id} not found at {file_path}")
         return {'bots': []}
     
     def save_channel_data(self, file_path, data):
@@ -161,6 +160,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
             with open(file_path, 'r') as file:
                 content = json.load(file)
                 return content
+        logging.debug(f"Channel data not found at {file_path}")
         return {'bots': []}
 
     def get_bots(self, guild):
@@ -186,7 +186,6 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         try:
             for guild in self.bot.guilds:
                 bots = self.get_bots(guild)
-                logging.info(f'{bots} in {guild.name}')
                 channel_file_path = f'data/hc/{guild.id}/channel.json'
                 channel_data = self.load_channel_data(channel_file_path)
                 if channel_data['bots']:
