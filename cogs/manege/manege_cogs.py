@@ -46,18 +46,19 @@ class ManagementCog(commands.Cog):
     @app_commands.autocomplete(cog=cog_autocomplete)
     @is_owner_check()
     async def reload_cog(self, interaction: discord.Interaction, cog: str):
+        await interaction.response.defer()
         available_cogs = self._get_available_cogs()
         
         if cog not in available_cogs:
-            await interaction.response.send_message(f"'{cog}' は利用可能なcogのリストに含まれていません。")
+            await interaction.followup.send(f"'{cog}' は利用可能なcogのリストに含まれていません。")
             return
 
         try:
             await self.bot.reload_extension(cog)
             await self.bot.tree.sync()
-            await interaction.response.send_message(f"{cog}を再読み込みしました。")
+            await interaction.followup.send(f"{cog}を再読み込みしました。")
         except commands.ExtensionNotLoaded:
-            await interaction.response.send_message(f"'{cog}' は読み込まれていません。")
+            await interaction.followup.send(f"'{cog}' は読み込まれていません。")
         except commands.ExtensionFailed as e:
             await interaction.response.send_message(f"'{cog}' の再読み込み中にエラーが発生しました。\n{type(e).__name__}: {e}")
 

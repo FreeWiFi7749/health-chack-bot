@@ -13,6 +13,7 @@ import asyncio
 
 from utils import presence
 from utils.logging import save_log
+from utils import error
 
 load_dotenv()
 
@@ -32,7 +33,7 @@ logger.setLevel(logging.INFO)
 logger.addHandler(SessionIDHandler())
 
 TOKEN = os.getenv('BOT_TOKEN')
-command_prefix = ['gz/']
+command_prefix = ['hc/']
 main_guild_id = int(os.getenv('MAIN_GUILD_ID'))
 
 class MyBot(commands.AutoShardedBot):
@@ -102,7 +103,10 @@ class MyBot(commands.AutoShardedBot):
                 traceback.print_exc()
                 print(f'Failed to load extension {p.stem}: {e}\nFull error: {e.__cause__}')
 
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, exc):
+        await error.send_error_message(ctx, exc)
+
 intent: discord.Intents = discord.Intents.all()
 bot = MyBot(command_prefix=command_prefix, intents=intent, help_command=None)
-
 bot.run(TOKEN)

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from utils.db.table import BotTable
 from utils.db.db import Database
+from utils.logger import MyLogger
 
 class DatabaseSetup:
     def __init__(self):
@@ -31,17 +32,24 @@ class DatabaseSetup:
         self.bot_table.drop_table()
         self.create_tables()
 
-
 class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health check commands for bots'):
     def __init__(self, bot, db):
         self.bot = bot
-        self.db = BotTable(db)  # db は Database クラスのインスタンスを渡す
+        self.db = BotTable(db)
         self.check_bots.start()
         self.log_setup()
         logging.debug('HealthCheckGroup initialized')
 
     def log_setup(self):
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        logger = MyLogger('health-check')
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logging.getLogger('health-check').addHandler(handler)
+        logging.getLogger('health-check').setLevel(logging.DEBUG)
 
     def cog_unload(self):
         self.check_bots.cancel()
@@ -76,7 +84,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         if bot_member is None or not bot_member.bot:
             await interaction.response.send_message("指定されたユーザーはBOTではありません。")
             return
-        self.db.add_bot(interaction.user.id, bot_member.id, bot_member.name, datetime.utcnow())
+        self.db.add_bot(interaction.user.id, bot_member.id, bot_member.name, datetime.utcnow(), interaction.guild.id)
         await interaction.response.send_message(f"{bot_member.name}を監視リストに追加しました。")
 
     @command(name='channel_add', description='チャンネルに通知を送信するBOTを追加します。')
@@ -89,7 +97,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
             await interaction.response.send_message("指定されたユーザーはBOTではありません。")
             return
 
-        self.db.add_channel(bot_member.id, channel.id)
+        self.db.add_channel(bot_member.id, channel.id, channel.name)
         await interaction.response.send_message(f"{channel.mention}に{bot_member.mention}の通知を追加しました。")
 
     @command(name='list', description='あなたが登録しているBOTのリストを表示します。')
@@ -112,15 +120,21 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         logging.debug('Checking bots...')
         try:
             for guild in self.bot.guilds:
-                bots = self.db.get_bots(guild.id)  # guild.id を渡すように修正
+                bots = self.db.get_bots(guild.id)
+                logging.debug(f"サーバー: {guild.name}")
+                logging.debug(f"BOTリスト: {bots}")
                 for bot in bots:
-                    user_id = self.find_user_by_bot_id(bot.id)
+                    user_id = self.db.find_user_by_bot_id(bot[0])
+                    logging.debug(f"ユーザーID: {user_id}")
                     if user_id is not None:
-                        bot_data = self.db.get_bot_data(bot.id)
+                        bot_data = self.db.get_bot_data(bot[0])
+                        logging.debug(f"BOTデータ: {bot_data}")
                         if bot_data:
                             bot_member = guild.get_member(bot_data['id'])
+                            logging.debug(f"BOTメンバー: {bot_member}")
                             if bot_member:
                                 last_online = datetime.fromisoformat(bot_data['last_online'])
+                                logging.debug(f"BOTオンライン: {last_online}")
                                 if bot_member.status != discord.Status.online:
                                     logging.debug(f"BOT: {bot_member.name}")
                                     logging.debug(f"BOT: {bot_member.status}")
@@ -132,10 +146,12 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                             logging.debug(f"最終通知: {last_notified}")
                                         else:
                                             last_notified = datetime.fromisoformat(last_notified)
+                                            logging.debug(f"最終通知: {last_notified}")
 
                                         if datetime.utcnow() - last_notified > timedelta(minutes=10):
                                             logging.debug(f"{bot_member.name}がオフラインになって10分が経過しました。")
                                             notification_channel = self.db.get_notification_channel(guild.id)
+                                            logging.debug(f"通知チャンネル: {notification_channel}")
                                             if notification_channel:
                                                 logging.debug(f"通知チャンネル: {notification_channel.name}")
                                                 now_jst = datetime.now(timezone(timedelta(hours=9)))
@@ -163,6 +179,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                                 else:
                                                     logging.error("ユーザーが見つかりません。")
                                             self.db.update_last_notification_time(bot_member.id, datetime.utcnow().isoformat())
+                                            logging.debug(f"{bot_member.name}の通知時間を更新しました。")
                                         else:
                                             logging.debug(f"{bot_member.name}に通知を送信済みです。")
                                     else:
@@ -183,6 +200,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                             e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオンライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
                                             await notification_channel.send(embed=e)
                                             self.db.update_last_channel_online_notification_time(bot_member.id, datetime.utcnow().isoformat())
+                                            logging.debug(f"{bot_member.name}にチャンネル通知を送信しました。")
                                         else:
                                             logging.debug("通知チャンネルが見つかりません。")
                                         if user_id is not None:
@@ -198,9 +216,12 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                                                     e.add_field(name='BOT情報', value=f"ID: {bot_member.id}\n名前: {bot_member.name}\nオンライン時間: <t:{int(last_online_timestamp)}:F> | <t:{int(last_online_timestamp)}:R>")
                                                     await dm_channel.send(embed=e)
                                                     self.db.update_last_dm_online_notification_time(bot_member.id, datetime.utcnow().isoformat())
+                                                    logging.debug(f"{bot_member.name}にDMを送信しました。")
                                             bot_data['last_online'] = datetime.utcnow().isoformat()
                                             self.db.update_bot_last_online(bot_member.id, datetime.utcnow().isoformat())
+                                            logging.debug(f"{bot_member.name}のオンライン時間を更新しました。")
                                             last_notified = bot_data.get('last_notification_time', None)
+                                            logging.debug(f"最終通知: {last_notified}")
                                             if last_notified is not None:
                                                 self.db.reset_last_notification_time(bot_member.id)
                                                 logging.debug(f"{bot_member.name}のオンライン時間と通知時間を更新しました。")
