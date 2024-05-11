@@ -16,7 +16,8 @@ class BotTable:
             last_channel_notification_time TIMESTAMP,
             last_dm_notification_time TIMESTAMP,
             last_channel_online_notification_time TIMESTAMP,
-            last_dm_online_notification_time TIMESTAMP
+            last_dm_online_notification_time TIMESTAMP,
+            guild_id BIGINT NOT NULL
         );
         """
         self.db.execute(query, commit=True)
@@ -59,8 +60,12 @@ class BotTable:
         values.append(bot_id)
         self.db.execute(query, values, commit=True)
 
-    def get_bots(self, user_id):
-        query = """
-        SELECT * FROM bots WHERE user_id = %s;
-        """
-        return self.db.execute(query, (user_id,))
+    def get_bots(self, guild_id):
+        query = "SELECT * FROM bots WHERE guild_id = %s"
+        return self.db.execute(query, (guild_id,))
+    
+    def reset_table(self):
+        query = "TRUNCATE TABLE bots;"
+        self.db.execute(query, commit=True)
+        query = "TRUNCATE TABLE channels;"
+        self.db.execute(query, commit=True)

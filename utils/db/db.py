@@ -27,8 +27,26 @@ class Database:
         logging.debug("データベースに変更をコミットしました。")
 
     def execute(self, query, params=None, commit=False):
-        with self.conn.cursor(cursor_factory=RealDictCursor) as cursor:
+        # connection オブジェクトから cursor を生成
+        cursor = self.conn.cursor()
+
+        # cursor を使用してクエリを実行
+        if params:
             cursor.execute(query, params)
-            if commit:
-                self.conn.commit()
-            return cursor.fetchall()
+        else:
+            cursor.execute(query)
+
+        # 必要に応じて結果を取得
+        if query.strip().lower().startswith("select"):
+            results = cursor.fetchall()
+        else:
+            results = None
+
+        # cursor を閉じる
+        cursor.close()
+
+        if commit:
+            self.conn.commit()
+
+        return results
+

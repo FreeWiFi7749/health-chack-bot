@@ -5,6 +5,7 @@ from discord.app_commands import command
 from discord.ext.commands import GroupCog
 
 import logging
+import traceback
 from datetime import datetime, timedelta, timezone
 
 from utils.db.table import BotTable
@@ -26,11 +27,15 @@ class DatabaseSetup:
     def close_connection(self):
         self.db.close()
 
+    def reset_tables(self):
+        self.bot_table.drop_table()
+        self.create_tables()
+
 
 class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health check commands for bots'):
-    def __init__(self, bot, db_connection):
+    def __init__(self, bot, db):
         self.bot = bot
-        self.db = BotTable(db_connection)
+        self.db = BotTable(db)  # db は Database クラスのインスタンスを渡す
         self.check_bots.start()
         self.log_setup()
         logging.debug('HealthCheckGroup initialized')
@@ -42,7 +47,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         self.check_bots.cancel()
 
     async def bot_list_autocomplete(self, interaction: discord.Interaction, current: str):
-        your_bots = self.db.get_bots(interaction.user.id)
+        your_bots = self.db.get_bots(interaction.user.id, interaction.guild.id)
         choices = []
         for bot in your_bots:
             if current in bot['name']:
@@ -89,7 +94,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
 
     @command(name='list', description='あなたが登録しているBOTのリストを表示します。')
     async def list_bots(self, interaction):
-        bots = self.db.get_bots(interaction.user.id)
+        bots = self.db.get_bots(interaction.user.id, interaction.guild.id)
         bot_names = ', '.join(bot['name'] for bot in bots)
         e = discord.Embed(title='登録されているBOT', description=bot_names)
         e.set_footer(text=f"{len(bots)}個のBOTが登録されています。")
@@ -107,7 +112,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         logging.debug('Checking bots...')
         try:
             for guild in self.bot.guilds:
-                bots = self.db.get_bots(guild)
+                bots = self.db.get_bots(guild.id)  # guild.id を渡すように修正
                 for bot in bots:
                     user_id = self.find_user_by_bot_id(bot.id)
                     if user_id is not None:
@@ -207,7 +212,9 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
                     else:
                         logging.debug(f"ユーザーが見つかりません。")
         except Exception as e:
-            logging.error(f"BOTのヘルスチェック中にエラーが発生しました: {e}")
+            err_traceback = traceback.format_exc()
+            logging.error(f"Error: {e}")
+            logging.error(f"Error traceback: {err_traceback}")
             pass 
 
 async def setup(bot):
@@ -216,4 +223,4 @@ async def setup(bot):
         logging.error("データベースへの接続に失敗しました。")
         return
     db_setup.create_tables()
-    await bot.add_cog(HealthCheckGroup(bot, db_setup.db_connection))
+    await bot.add_cog(HealthCheckGroup(bot, db_setup.db))
