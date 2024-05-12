@@ -1,4 +1,6 @@
 from .db import Database
+import logging
+from psycopg2.extras import RealDictCursor
 
 class BotTable:
     def __init__(self, db: Database):
@@ -70,7 +72,9 @@ class BotTable:
 
     def get_bots(self, guild_id):
         query = "SELECT * FROM bots WHERE guild_id = %s"
-        return self.db.execute(query, (guild_id,))
+        result = self.db.execute(query, (guild_id,))
+        logging.debug(f"Query: {query} result: {result}")
+        return result
     
     def reset_table(self):
         query = "TRUNCATE TABLE bots;"
@@ -79,30 +83,48 @@ class BotTable:
         self.db.execute(query, commit=True)
 
     def find_user_by_bot_id(self, bot_id):
-        query = "SELECT user_id FROM bots WHERE bot_id = %s;"
-        result = self.db.execute(query, (bot_id,))
+        query = "SELECT user_id FROM bots WHERE bot_id = %s"
+        result = self.db.execute(query, (bot_id,), cursor_factory=RealDictCursor)
         if result:
             return result[0]['user_id']
         return None
 
     def get_bot_data(self, bot_id):
         query = "SELECT * FROM bots WHERE bot_id = %s;"
-        result = self.db.execute(query, (bot_id,))
+        result = self.db.execute(query, (bot_id,), cursor_factory=RealDictCursor)
         if result:
-            return result[0]  # 最初の結果を返す
+            return result[0]  # 最初の結果を辞書型で返す
         return None
 
     def update_last_notification_time(self, bot_id, new_time, column_name):
         query = f"UPDATE bots SET {column_name} = %s WHERE bot_id = %s;"
         self.db.execute(query, (new_time, bot_id), commit=True)
 
-    def get_notification_channel(self, guild_id):
-        query = "SELECT notification_channel_id FROM guild_settings WHERE guild_id = %s;"  # 仮のテーブル名とカラム名
-        result = self.db.execute(query, (guild_id,))
-        if result:
-            return result[0]['notification_channel_id']  # 通知チャンネルIDを返す
-        return None
 
     def reset_last_notification_time(self, bot_id):
         query = "UPDATE bots SET last_notification_time = NULL WHERE bot_id = %s;"
         self.db.execute(query, (bot_id,), commit=True)
+
+    def update_last_dm_notification_time(self, bot_id, new_time):
+        query = "UPDATE bots SET last_dm_notification_time = %s WHERE bot_id = %s;"
+        self.db.execute(query, (new_time, bot_id), commit=True)
+
+    def update_last_channel_notification_time(self, bot_id, new_time):
+        query = "UPDATE channels SET last_channel_notification_time = %s WHERE bot_id = %s;"
+        self.db.execute(query, (new_time, bot_id), commit=True)
+
+    def update_last_channel_online_notification_time(self, bot_id, new_time):
+        query = "UPDATE channels SET last_channel_online_notification_time = %s WHERE bot_id = %s;"
+        self.db.execute(query, (new_time, bot_id), commit=True)
+
+    def update_last_dm_online_notification_time(self, bot_id, new_time):
+        query = "UPDATE bots SET last_dm_online_notification_time = %s WHERE bot_id = %s;"
+        self.db.execute(query, (new_time, bot_id), commit=True)
+
+    def get_notification_channel(self, bot_id):
+        query = "SELECT channel_id FROM channels WHERE bot_id = %s;"
+        result = self.db.execute(query, (bot_id,), cursor_factory=RealDictCursor)
+        if result:
+            return result[0]['channel_id']
+        return None
+

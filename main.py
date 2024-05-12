@@ -32,6 +32,8 @@ logger = logging.getLogger('discord.gateway')
 logger.setLevel(logging.INFO)
 logger.addHandler(SessionIDHandler())
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 TOKEN = os.getenv('BOT_TOKEN')
 command_prefix = ['hc/']
 main_guild_id = int(os.getenv('MAIN_GUILD_ID'))
@@ -109,4 +111,5 @@ class MyBot(commands.AutoShardedBot):
 
 intent: discord.Intents = discord.Intents.all()
 bot = MyBot(command_prefix=command_prefix, intents=intent, help_command=None)
+bot.run(TOKEN)
 bot.run(TOKEN)

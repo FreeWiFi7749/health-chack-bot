@@ -1,5 +1,4 @@
 import psycopg2
-from psycopg2.extras import RealDictCursor
 import logging
 import os
 
@@ -26,27 +25,12 @@ class Database:
         self.conn.commit()
         logging.debug("データベースに変更をコミットしました。")
 
-    def execute(self, query, params=None, commit=False):
-        # connection オブジェクトから cursor を生成
-        cursor = self.conn.cursor()
-
-        # cursor を使用してクエリを実行
-        if params:
+    def execute(self, query, params=None, commit=False, cursor_factory=None):
+        with self.conn.cursor(cursor_factory=cursor_factory) as cursor:
             cursor.execute(query, params)
-        else:
-            cursor.execute(query)
-
-        # 必要に応じて結果を取得
-        if query.strip().lower().startswith("select"):
-            results = cursor.fetchall()
-        else:
-            results = None
-
-        # cursor を閉じる
-        cursor.close()
-
-        if commit:
-            self.conn.commit()
-
-        return results
+            if commit:
+                self.conn.commit()
+            if cursor.description:
+                return cursor.fetchall()
+            return None
 
