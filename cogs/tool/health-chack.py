@@ -2,7 +2,7 @@ import discord
 from discord.ext import tasks
 from discord import app_commands
 from discord.app_commands import command
-from discord.ext.commands import GroupCog
+from discord.ext.commands import Cog  # 修正
 
 import logging
 import traceback
@@ -32,7 +32,7 @@ class DatabaseSetup:
         self.bot_table.drop_table()
         self.create_tables()
 
-class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health check commands for bots'):
+class HealthCheckGroup(Cog):  # 修正
     def __init__(self, bot, db):
         self.bot = bot
         self.db = BotTable(db)
@@ -76,7 +76,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
             choices.append(app_commands.Choice(name="選択肢が見つかりません", value="none"))
         return choices
 
-    @command(name='add', description='BOTを監視リストに追加します。')
+    @app_commands.command(name='add', description='BOTを監視リストに追加します。')  # 修正
     @app_commands.autocomplete(bot=bot_autocomplete)
     @app_commands.describe(bot='BOTを選択してください。')
     async def add_bot(self, interaction, bot: str):
@@ -87,7 +87,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         self.db.add_bot(interaction.user.id, bot_member.id, bot_member.name, datetime.utcnow(), interaction.guild.id)
         await interaction.response.send_message(f"{bot_member.name}を監視リストに追加しました。")
 
-    @command(name='channel_add', description='チャンネルに通知を送信するBOTを追加します。')
+    @app_commands.command(name='channel_add', description='チャンネルに通知を送信するBOTを追加します。')  # 修正
     @app_commands.autocomplete(bot=bot_autocomplete)
     @app_commands.describe(bot='BOTを選択してください。')
     @app_commands.describe(channel='通知を送信するチャンネルを選択してください。')
@@ -100,7 +100,7 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         self.db.add_channel(bot_member.id, channel.id, channel.name)
         await interaction.response.send_message(f"{channel.mention}に{bot_member.mention}の通知を追加しました。")
 
-    @command(name='list', description='あなたが登録しているBOTのリストを表示します。')
+    @app_commands.command(name='list', description='あなたが登録しているBOTのリストを表示します。')  # 修正
     async def list_bots(self, interaction):
         bots = self.db.get_bots(interaction.user.id, interaction.guild.id)
         bot_names = ', '.join(bot['name'] for bot in bots)
@@ -108,9 +108,9 @@ class HealthCheckGroup(GroupCog, group_name='hc', group_description='Health chec
         e.set_footer(text=f"{len(bots)}個のBOTが登録されています。")
         await interaction.response.send_message(embed=e)
 
-    @command(name='rm', description='あなたが登録しているBOTをリストから削除します。')
+    @app_commands.command(name='rm', description='あなたが登録しているBOTをリストから削除します。')  # 修正
     @app_commands.autocomplete(bot=bot_list_autocomplete)
-    @app_commands.describe(bot='BOT��択してください。')
+    @app_commands.describe(bot='BOTを選択してください。')
     async def remove_bot(self, interaction, bot: str):
         self.db.remove_bot(bot)
         await interaction.response.send_message("指定されたBOTをリストから削除しました。")
